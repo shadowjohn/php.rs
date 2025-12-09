@@ -20,7 +20,9 @@
 
 # 安裝 rustup（管理 Rust 版本）
 https://rust-lang.org/tools/install/
+
 或 linux 版
+
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # 安裝完成後，重新打開終端機或 source ~/.cargo/env
@@ -31,15 +33,20 @@ cargo --version   # 檢查 Cargo 是否可用
 cargo new test_tool --bin   # 建立一個二進位專案 (main.rs)
 cd test_tool
 
-#編譯 & 運行
+# 編譯 & 運行
 開發模式
+
 cargo run
+
 會編譯 debug 版本，方便測試
+
 輸出路徑：target/debug/test_tool.exe (Windows) 或 target/debug/test_tool (Linux/Mac)
 
-#Release 模式
+# Release 模式
 cargo build --release
+
 會編譯 release 版本，效能最佳化
+
 輸出路徑：target/release/test_tool.exe (Windows) 或 target/release/test_tool (Linux/Mac)
 
 ## VS Code 插件
