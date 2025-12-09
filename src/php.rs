@@ -1,13 +1,55 @@
 use std::path::Path;
+use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 // [dependencies]
 // #chrono = "0.4"
 use chrono::{NaiveDateTime, Local};
 use serde::{Serialize, Deserialize};
 use serde_json::{Value, to_string, to_string_pretty, from_str, from_slice, Deserializer, Error as SerdeError};
+
 use std::fs;
+use std::fs::File;
+use fs2::FileExt;
+use std::fs::OpenOptions;
+use std::io::{self, Write};
 use sha2::{Sha256, Digest};
 use base64::{engine::general_purpose, Engine as _};
+use glob::glob;
+use std::env;
+use std::path::PathBuf;
+
+#[allow(dead_code)]
+pub fn basedir() -> String {
+    env::current_exe()
+        .ok()
+        .and_then(|exe_path| exe_path.parent().map(|p| p.to_string_lossy().to_string()))
+        .unwrap_or_else(|| ".".to_string()) // 如果失敗就回傳當前目錄
+}
+
+#[allow(dead_code)]
+pub fn basename(path: &str) -> String {
+    match Path::new(path).file_name() {
+        Some(name) => name.to_string_lossy().to_string(),
+        None => "".to_string(),
+    }
+}
+
+#[allow(dead_code)]
+pub fn subname(path: &str) -> String {
+    match Path::new(path).file_stem() {
+        Some(stem) => stem.to_string_lossy().to_string(),
+        None => "".to_string(),
+    }
+}
+
+
+#[allow(dead_code)]
+pub fn dirname(path: &str) -> String {
+    match Path::new(path).parent() {
+        Some(parent) => parent.to_string_lossy().to_string(),
+        None => ".".to_string(),
+    }
+}
 
 #[allow(dead_code)]
 pub fn time() -> u64 {
@@ -169,8 +211,17 @@ pub fn file_get_contents(path: &str) -> Option<String> {
 
 /// file_put_contents
 #[allow(dead_code)]
-pub fn file_put_contents(path: &str, content: &str) -> bool {
-    fs::write(path, content).is_ok()
+pub fn file_put_contents(path: &str, content: &str, is_append: bool) -> bool {
+    if is_append {
+        let mut file = match OpenOptions::new().append(true).create(true).open(path) {
+            Ok(f) => f,
+            Err(_) => return false,
+        };
+        return file.write_all(content.as_bytes()).is_ok();
+    }
+    else{
+        fs::write(path, content).is_ok()        
+    }    
 }
 
 /// ---------------- bytes 版 ----------------
@@ -277,4 +328,75 @@ pub fn copy(src: &str, dst: &str) -> bool {
 #[allow(dead_code)]
 pub fn rename(src: &str, dst: &str) -> bool {
     fs::rename(src, dst).is_ok()
+}
+
+//
+//    let files = glob_files("images/*.png");
+//    for f in files {
+//        println!("{}", f);
+//    }
+//
+
+#[allow(dead_code)]
+pub fn glob_files(pattern: &str) -> Vec<String> {
+    glob(pattern)
+        .map(|paths| {
+            paths
+                .filter_map(|entry| entry.ok())                      // 移除錯誤
+                .map(|path| path.to_string_lossy().to_string())     // 轉為 String
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default() // pattern 無效 => 回傳空陣列
+}
+
+#[allow(dead_code)]
+pub fn unlink(path: &str) -> bool {
+    fs::remove_file(path).is_ok()
+}
+
+#[allow(dead_code)]
+pub fn filesize(path: &str) -> u64 {
+    match fs::metadata(path) {
+        Ok(metadata) => metadata.len(),
+        Err(_) => 0,
+    }
+}
+
+#[allow(dead_code)]
+pub fn exit() {
+    process::exit(0);
+}
+
+#[allow(dead_code)]
+pub fn touch(path: &str) {
+    let _ = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(path);
+}
+
+#[allow(dead_code)]
+pub fn mkdir(path: &str) -> bool {
+    fs::create_dir_all(path).is_ok()
+}
+
+#[allow(dead_code)]
+pub fn is_lock(path: &str) -> bool {
+    let file = match OpenOptions::new().read(true).write(true).open(path) {
+        Ok(f) => f,
+        Err(_) => return true, // 無法開啟也視為已鎖
+    };
+
+    let locked = file.try_lock_exclusive().is_err(); // 嘗試加鎖
+    if !locked {
+        let _ = file.unlock(); // 成功加鎖 → 立即解鎖
+    }
+    locked
+}
+
+#[allow(dead_code)]
+pub fn lock_file(path: &str) -> io::Result<File> {
+    let file = OpenOptions::new().read(true).write(true).create(true).open(path)?;
+    file.lock_exclusive()?; // 阻塞加排他鎖
+    Ok(file) // 返回 File，持有 File 期間檔案保持鎖定
 }
