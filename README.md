@@ -19,6 +19,8 @@
 ---
 
 # 安裝 rustup（管理 Rust 版本）
+https://rust-lang.org/tools/install/
+或 linux 版
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # 安裝完成後，重新打開終端機或 source ~/.cargo/env
